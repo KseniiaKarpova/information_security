@@ -1,9 +1,11 @@
+import operator
+import copy
 import numpy as np
 
-key_lengh = 128/32 #for cast
+key_lengh = int(128/32) #for cast
 msg_lengh = 2 #for cast
 count_of_round = 16 #for cast
-mod_2_32 = np.left_shift(np.uint64(2),np.uint64(31)) #64 for cast
+mod_2_32 = np.uint64(2 << 31) #64 for cast
 k_map = (lambda x: np.uint8(x))([3,  2,  1,  0,
      7,  6,  5,  4,
     11, 10,  9,  8,
@@ -12,6 +14,7 @@ k_map = (lambda x: np.uint8(x))([3,  2,  1,  0,
 #np.uint64()
 #np.uint32()
 #np.uint8()
+global Ia, Ib, Ic, Id, KEY, Message
 S1 = [
     0x30fb40d4, 0x9fa0ff0b, 0x6beccd2f, 0x3f258c7a, 0x1e213f2f, 0x9c004dd3, 0x6003e540, 0xcf9fc949,
     0xbfd4af27, 0x88bbbdb5, 0xe2034090, 0x98d09675, 0x6e63a0e0, 0x15c361d2, 0xc2e7661d, 0x22d4ff8e,
@@ -291,40 +294,138 @@ S8 = [
     0xe97625a5, 0x0614d1b7, 0x0e25244b, 0x0c768347, 0x589e8d82, 0x0d2059d1, 0xa466bb1e, 0xf8da0a82,
     0x04f19130, 0xba6e4ec0, 0x99265164, 0x1ee7230d, 0x50b2ad80, 0xeaee6801, 0x8db2a283, 0xea8bf59e
 ]
-def splitI(I, Ia, Ib, Ic, Id): # I -> 32, 8 8 8 8
-    Ia = np.uint8(I >> 24 & 0xFFFFFFFF)
-    Ib = np.uint8(I >> 16 & 0xFFFFFFFF)
-    Ic = np.uint8(I >> 8 & 0xFFFFFFFF)
-    Id = np.uint8(I & 0xFFFFFFFF)
+def g(key , i):
+    return  np.uint8(key[k_map[0]])
+
+def splitI(I): # I -> 32, 8 8 8 8
+    global Ia
+    Ia = np.uint8((np.uint32(I) >> 24) & 0xFF)
+    global Ib
+    Ib = np.uint8((np.uint32(I) >> 16) & 0xFF)
+    global Ic
+    Ic = np.uint8((np.uint32(I) >> 8) & 0xFF)
+    global Id
+    Id = np.uint8(np.uint32(I) & 0xFF)
 
 def sum_mod_2_32(a,b): # 64 64
-    return (np.uint64(a) +np.uint64(b)) % mod_2_32
+    return (np.uint64(a) + np.uint64(b)) % mod_2_32
 
 def subtract_mod_2_32(a,b):#32 32
-    if b<=a:
-        return a-b
+    if np.uint32(b) <= np.uint32(a):
+        return np.uint32(a-b)
     else:
-        return (mod_2_32 + a) -b
+        return  (mod_2_32 + np.uint32(a)) - np.uint32(b)
 
 
 def cyclic_Shift(x, shift): #32 8
-    s = shift % 32
-    return ( x << s ) | ( x >> ( 32 - s ) )
+    s = np.uint8(shift % 32)
+    return ( np.uint32(x) << s) | ( np.uint32(x) >> ( 32 - s ) )
 
 
-def cast(blok, key):
+def cast(msg, key, descryption = False):
+    x=[np.uint32(0)]*key_lengh
+    '''
+    x = copy.deepcopy(key)
+    if len(x)<33 :
+        for i in range(33-len(x)):
+            x.append(np.uint32(0))
+    '''
 
+    z=[np.uint32(0)]*key_lengh
+    K = [np.uint32(0)]*32
+    for i in range(2):
+        z[0] = x[0] ^ S5[g( x, 0xD )] ^ S6[g( x, 0xF )] ^ S7[g( x, 0xC )] ^ S8[g( x, 0xE )] ^ S7[g( x, 0x8 )]
+        z[1] = x[2] ^ S5[g( z, 0x0 )] ^ S6[g( z, 0x2 )] ^ S7[g( z, 0x1 )] ^ S8[g( z, 0x3 )] ^ S8[g( x, 0xA )]
+        z[2] = x[3] ^ S5[g( z, 0x7 )] ^ S6[g( z, 0x6 )] ^ S7[g( z, 0x5 )] ^ S8[g( z, 0x4 )] ^ S5[g( x, 0x9 )]
+        z[3] = x[1] ^ S5[g( z, 0xA )] ^ S6[g( z, 0x9 )] ^ S7[g( z, 0xB )] ^ S8[g( z, 0x8 )] ^ S6[g( x, 0xB )]
+
+        K[0 + i * 16] = S5[g( z, 0x8 )] ^ S6[g( z, 0x9 )] ^ S7[g( z, 0x7 )] ^ S8[g( z, 0x6 )] ^ S5[g( z, 0x2 )]
+        K[1 + i * 16] = S5[g( z, 0xA )] ^ S6[g( z, 0xB )] ^ S7[g( z, 0x5 )] ^ S8[g( z, 0x4 )] ^ S6[g( z, 0x6 )]
+        K[2 + i * 16] = S5[g( z, 0xC )] ^ S6[g( z, 0xD )] ^ S7[g( z, 0x3 )] ^ S8[g( z, 0x2 )] ^ S7[g( z, 0x9 )]
+        K[3 + i * 16] = S5[g( z, 0xE )] ^ S6[g( z, 0xF )] ^ S7[g( z, 0x1 )] ^ S8[g( z, 0x0 )] ^ S8[g( z, 0xC )]
+
+        x[0] = z[2] ^ S5[g( z, 0x5 )] ^ S6[g( z, 0x7 )] ^ S7[g( z, 0x4 )] ^ S8[g( z, 0x6 )] ^ S7[g( z, 0x0 )]
+        x[1] = z[0] ^ S5[g( x, 0x0 )] ^ S6[g( x, 0x2 )] ^ S7[g( x, 0x1 )] ^ S8[g( x, 0x3 )] ^ S8[g( z, 0x2 )]
+        x[2] = z[1] ^ S5[g( x, 0x7 )] ^ S6[g( x, 0x6 )] ^ S7[g( x, 0x5 )] ^ S8[g( x, 0x4 )] ^ S5[g( z, 0x1 )]
+        x[3] = z[3] ^ S5[g( x, 0xA )] ^ S6[g( x, 0x9 )] ^ S7[g( x, 0xB )] ^ S8[g( x, 0x8 )] ^ S6[g( z, 0x3 )]
+
+        K[4 + i * 16] = S5[g( x, 0x3 )] ^ S6[g( x, 0x2 )] ^ S7[g( x, 0xC )] ^ S8[g( x, 0xD )] ^ S5[g( x, 0x8 )]
+        K[5 + i * 16] = S5[g( x, 0x1 )] ^ S6[g( x, 0x0 )] ^ S7[g( x, 0xE )] ^ S8[g( x, 0xF )] ^ S6[g( x, 0xD )]
+        K[6 + i * 16] = S5[g( x, 0x7 )] ^ S6[g( x, 0x6 )] ^ S7[g( x, 0x8 )] ^ S8[g( x, 0x9 )] ^ S7[g( x, 0x3 )]
+        K[7 + i * 16] = S5[g( x, 0x5 )] ^ S6[g( x, 0x4 )] ^ S7[g( x, 0xA )] ^ S8[g( x, 0xB )] ^ S8[g( x, 0x7 )]
+
+        z[0] = x[0] ^ S5[g( x, 0xD )] ^ S6[g( x, 0xF )] ^ S7[g( x, 0xC )] ^ S8[g( x, 0xE )] ^ S7[g( x, 0x8 )]
+        z[1] = x[2] ^ S5[g( z, 0x0 )] ^ S6[g( z, 0x2 )] ^ S7[g( z, 0x1 )] ^ S8[g( z, 0x3 )] ^ S8[g( x, 0xA )]
+        z[2] = x[3] ^ S5[g( z, 0x7 )] ^ S6[g( z, 0x6 )] ^ S7[g( z, 0x5 )] ^ S8[g( z, 0x4 )] ^ S5[g( x, 0x9 )]
+        z[3] = x[1] ^ S5[g( z, 0xA )] ^ S6[g( z, 0x9 )] ^ S7[g( z, 0xB )] ^ S8[g( z, 0x8 )] ^ S6[g( x, 0xB )]
+
+        K[8  + i * 16] = S5[g( z, 0x3 )] ^ S6[g( z, 0x2 )] ^ S7[g( z, 0xC )] ^ S8[g( z, 0xD )] ^ S5[g( z, 0x9 )]
+        K[9  + i * 16] = S5[g( z, 0x1 )] ^ S6[g( z, 0x0 )] ^ S7[g( z, 0xE )] ^ S8[g( z, 0xF )] ^ S6[g( z, 0xC )]
+        K[10 + i * 16] = S5[g( z, 0x7 )] ^ S6[g( z, 0x6 )] ^ S7[g( z, 0x8 )] ^ S8[g( z, 0x9 )] ^ S7[g( z, 0x2 )]
+        K[11 + i * 16] = S5[g( z, 0x5 )] ^ S6[g( z, 0x4 )] ^ S7[g( z, 0xA )] ^ S8[g( z, 0xB )] ^ S8[g( z, 0x6 )]
+
+        x[0] = z[2] ^ S5[g( z, 0x5 )] ^ S6[g( z, 0x7 )] ^ S7[g( z, 0x4 )] ^ S8[g( z, 0x6 )] ^ S7[g( z, 0x0 )]
+        x[1] = z[0] ^ S5[g( x, 0x0 )] ^ S6[g( x, 0x2 )] ^ S7[g( x, 0x1 )] ^ S8[g( x, 0x3 )] ^ S8[g( z, 0x2 )]
+        x[2] = z[1] ^ S5[g( x, 0x7 )] ^ S6[g( x, 0x6 )] ^ S7[g( x, 0x5 )] ^ S8[g( x, 0x4 )] ^ S5[g( z, 0x1 )]
+        x[3] = z[3] ^ S5[g( x, 0xA )] ^ S6[g( x, 0x9 )] ^ S7[g( x, 0xB )] ^ S8[g( x, 0x8 )] ^ S6[g( z, 0x3 )]
+
+        K[12 + i * 16] = S5[g( x, 0x8 )] ^ S6[g( x, 0x9 )] ^ S7[g( x, 0x7 )] ^ S8[g( x, 0x6 )] ^ S5[g( x, 0x3 )]
+        K[13 + i * 16] = S5[g( x, 0xA )] ^ S6[g( x, 0xB )] ^ S7[g( x, 0x5 )] ^ S8[g( x, 0x4 )] ^ S6[g( x, 0x7 )]
+        K[14 + i * 16] = S5[g( x, 0xC )] ^ S6[g( x, 0xD )] ^ S7[g( x, 0x3 )] ^ S8[g( x, 0x2 )] ^ S7[g( x, 0x8 )]
+        K[15 + i * 16] = S5[g( x, 0xE )] ^ S6[g( x, 0xF )] ^ S7[g( x, 0x1 )] ^ S8[g( x, 0x0 )] ^ S8[g( x, 0xD )]
+
+    L=[np.uint32(0)]*(count_of_round + 1)
+    L[0]= np.uint32(msg[0])
+
+    R = [np.uint32(0)] * (count_of_round + 1)
+    R[0] = np.uint32(msg[1])
+
+    for i in range(count_of_round):
+        rIndex = (count_of_round -1 - i) if descryption else i
+        Kmi = K[rIndex]
+        Kri = K[16+rIndex] & 0x1F
+        I = np.uint32(0)
+        f = np.uint32(0)
+
+        if rIndex % 3 == 0:
+            I = cyclic_Shift(sum_mod_2_32(Kmi, R[i]), Kri)
+            splitI(I)
+            f = sum_mod_2_32(subtract_mod_2_32(S1[Ia] ^ S2[Ib], S3[Ic]), S4[Id])
+        elif rIndex % 3 == 1:
+            I = cyclic_Shift(Kmi ^ R[i], Kri)
+            splitI(I)
+
+            f = sum_mod_2_32(subtract_mod_2_32(S1[Ia], S2[Ib]), S3[Ic]) ^ np.uint64(S4[Id])
+        elif rIndex % 3 == 2:
+            I = cyclic_Shift(subtract_mod_2_32(Kmi, R[i]), Kri)
+            splitI(I)
+            f = subtract_mod_2_32(sum_mod_2_32(S1[Ia], S2[Ib]) ^ np.uint64(S3[Ic]), S4[Id])
+
+        L[i + 1] = R[i]
+        R[i + 1] = np.uint32(L[i]) ^ np.uint32(f)
+
+    msg[0] = R[count_of_round]
+    msg[1] = L[count_of_round]
+    return msg
 
 def CBC_encryption(blok, key):
+    key=1
 
 def CBC_decryption(blok, key):
+    key =1
 
 
-def run(text, key):
-    for blok in text[0::8]:
-        if len(blok)<8:
-            print(blok, len(blok))
-        else:
-            print(blok)
+def run():
+    KEY = [0x01234567, 0x12345678, 0x23456789, 0x3456789A]
+    Message = [0x01234567, 0x89ABCDEF]
+    print(hex(g(KEY,0)))
+    print("================ Test 1 ================")
+    print("          Msg before: ",Message)
+    print(0x238B4FE5,  0x847E44B2)
+    Message = cast(Message, KEY)
+    print("Msg after encryption: ", Message)
+    print(hex(Message[0]), hex(Message[1]))
+    Message = cast(Message, KEY, True)
+    print("Msg after decryption: ", Message)
 
-
+run()
