@@ -6,10 +6,7 @@ key_lengh = int(128/32) #for cast
 msg_lengh = 2 #for cast
 count_of_round = 16 #for cast
 mod_2_32 = np.uint64(2 << 31) #64 for cast
-k_map = (lambda x: np.uint8(x))([3,  2,  1,  0,
-     7,  6,  5,  4,
-    11, 10,  9,  8,
-    15, 14, 13, 12] )#8
+
 #print(mod_2_32)
 #np.uint64()
 #np.uint32()
@@ -295,7 +292,7 @@ S8 = [
     0x04f19130, 0xba6e4ec0, 0x99265164, 0x1ee7230d, 0x50b2ad80, 0xeaee6801, 0x8db2a283, 0xea8bf59e
 ]
 def g(key , i):
-    return  np.uint8(key[k_map[0]])
+    return  np.uint8(key[i])
 
 def splitI(I): # I -> 32, 8 8 8 8
     global Ia
@@ -323,15 +320,16 @@ def cyclic_Shift(x, shift): #32 8
 
 
 def cast(msg, key, descryption = False):
-    x=[np.uint32(0)]*key_lengh
-    '''
     x = copy.deepcopy(key)
+    '''
+    x=[np.uint32(0)]*key_lengh
+    
     if len(x)<33 :
         for i in range(33-len(x)):
             x.append(np.uint32(0))
     '''
 
-    z=[np.uint32(0)]*key_lengh
+    z=[np.uint8(0)]*16
     K = [np.uint32(0)]*32
     for i in range(2):
         z[0] = x[0] ^ S5[g( x, 0xD )] ^ S6[g( x, 0xF )] ^ S7[g( x, 0xC )] ^ S8[g( x, 0xE )] ^ S7[g( x, 0x8 )]
@@ -400,24 +398,28 @@ def cast(msg, key, descryption = False):
             I = cyclic_Shift(subtract_mod_2_32(Kmi, R[i]), Kri)
             splitI(I)
             f = subtract_mod_2_32(sum_mod_2_32(S1[Ia], S2[Ib]) ^ np.uint64(S3[Ic]), S4[Id])
-
+        print(hex(K[i]), hex(Kmi),Kri)
         L[i + 1] = R[i]
         R[i + 1] = np.uint32(L[i]) ^ np.uint32(f)
 
     msg[0] = R[count_of_round]
     msg[1] = L[count_of_round]
     return msg
-
+'''
 def CBC_encryption(blok, key):
-    key=1
+
 
 def CBC_decryption(blok, key):
-    key =1
+'''
+
+
 
 
 def run():
-    KEY = [0x01234567, 0x12345678, 0x23456789, 0x3456789A]
+    KEY=[0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78, 0x23, 0x45, 0x67, 0x89, 0x34, 0x56, 0x78, 0x9A]
     Message = [0x01234567, 0x89ABCDEF]
+    print(KEY)
+    #print(KEY[0])
     print(hex(g(KEY,0)))
     print("================ Test 1 ================")
     print("          Msg before: ",Message)
