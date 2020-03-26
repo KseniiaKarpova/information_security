@@ -1,6 +1,9 @@
 import operator
 import copy
 import numpy as np
+import time
+import random
+import string
 
 key_lengh = int(128/32) #for cast
 msg_lengh = 2 #for cast
@@ -319,8 +322,10 @@ def cyclic_Shift(x, shift): #32 8
     return ( np.uint32(x) << s) | ( np.uint32(x) >> ( 32 - s ) )
 
 
+
 def cast(msg, key, descryption = False):
     x = copy.deepcopy(key)
+    msgg=[np.uint32(0)]*2
     '''
     x=[np.uint32(0)]*key_lengh
     
@@ -330,7 +335,7 @@ def cast(msg, key, descryption = False):
     '''
 
     z=[np.uint8(0)]*16
-    K = [np.uint32(0)]*32
+    K = [np.uint8(0)]*32
     for i in range(2):
         z[0] = x[0] ^ S5[g( x, 0xD )] ^ S6[g( x, 0xF )] ^ S7[g( x, 0xC )] ^ S8[g( x, 0xE )] ^ S7[g( x, 0x8 )]
         z[1] = x[2] ^ S5[g( z, 0x0 )] ^ S6[g( z, 0x2 )] ^ S7[g( z, 0x1 )] ^ S8[g( z, 0x3 )] ^ S8[g( x, 0xA )]
@@ -398,24 +403,85 @@ def cast(msg, key, descryption = False):
             I = cyclic_Shift(subtract_mod_2_32(Kmi, R[i]), Kri)
             splitI(I)
             f = subtract_mod_2_32(sum_mod_2_32(S1[Ia], S2[Ib]) ^ np.uint64(S3[Ic]), S4[Id])
-        print(hex(K[i]), hex(Kmi),Kri)
+        #print(hex(K[i]), hex(Kmi),Kri)
         L[i + 1] = R[i]
         R[i + 1] = np.uint32(L[i]) ^ np.uint32(f)
 
-    msg[0] = R[count_of_round]
-    msg[1] = L[count_of_round]
+    msgg[0] = R[count_of_round]
+    msgg[1] = L[count_of_round]
     return msg
-'''
-def CBC_encryption(blok, key):
+
+def CBC_encryption(msg, key, iv):
+    encry=[]
+    for i in msg:
+        #print(i)
+        g=[int.from_bytes(i[0:4], byteorder='big') ^ iv[0], int.from_bytes(i[4:8], byteorder='big') ^ iv[1]]
+        #s=[int.from_bytes(bytearray(g.to_bytes(8, 'big'))[0:4],byteorder='big') , int.from_bytes(bytearray(g.to_bytes(8, 'big'))[4:8],byteorder='big')]
+        #print(g)
+        iv = cast(g, key)
+        encry.append(iv)
+        #print(iv)
+        #print(g.to_bytes(8, byteorder='big'))
+    return encry
 
 
-def CBC_decryption(blok, key):
-'''
+def CBC_decryption(msg, key, iv):
+    decry=[]
+    for i in range(len(msg)):
+        m = cast(msg[i],key,True)
+        decry.append(int(m[0]^iv[0]).to_bytes(4, byteorder='big'))
+        decry.append(int(m[1]^iv[1]).to_bytes(4, byteorder='big'))
+        iv=msg[i]
+
+    return decry
+
+def CBC_init(msg, key, c0):
+    msg =[msg[i:i + 8] for i in range(0, len(msg), 8)]
+    key=[key[i] for i in range(len(key))]
+    #print(key)
+    c0=[int.from_bytes(c0[0:4], byteorder='big'), int.from_bytes(c0[4:8], byteorder='big')]
+    #print(msg)
+    if len(msg[-1]) != 8:
+        j=len(msg[-1])
+        while (7-len(msg[-1])) != 0:
+            msg[-1] += bytes([random.randint(1,10)])
+        msg[-1] += bytes([j])
+        #print(msg[-1])
+    else:
+        msg.append(bytes(''.join(random.choices(string.ascii_uppercase + string.digits, k=7))))
+        msg[-1] += bytes([0])
+    #print('c0 = ', c0)
+    print('msg =', msg)
+    print('key = ', key)
+    print('c0 = ',c0)
+    print('==================================')
+    encry_mes = CBC_encryption(msg, key,c0)
+    print('msg =', encry_mes)
+    print('key = ', key)
+    print('c0 = ', c0)
+    print('==================================')
+    decry_mes = CBC_decryption(encry_mes,key,c0)
+    print(decry_mes)
 
 
 
 
-def run():
+
+
+
+def testCBC():
+    msg = 'Hello world! This is my homework. IT IS HARD'
+    #print(msg)
+    key = '12345ksusha67890'
+    c0 = time.strftime("%H:%M:%S", time.localtime()) # 8 = 64 bit
+    #print(c0)
+    CBC_init(bytes(msg, encoding='utf-8'),bytearray(bytes(key, encoding='utf-8')),bytes(c0, encoding='utf-8'))
+
+
+
+
+#testCBC()
+def ECB():
     KEY=[0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78, 0x23, 0x45, 0x67, 0x89, 0x34, 0x56, 0x78, 0x9A]
     Message = [0x01234567, 0x89ABCDEF]
     print(KEY)
@@ -430,4 +496,4 @@ def run():
     Message = cast(Message, KEY, True)
     print("Msg after decryption: ", Message)
 
-run()
+#ECB()
