@@ -461,7 +461,7 @@ def CBC_init(msg, key, c0):
     print('c0 = ', c0)
     print('==================================')
     decry_mes = CBC_decryption(encry_mes,key,c0)
-    print(decry_mes)
+    print(''.join([i.decode('utf-8') for i in decry_mes]))
 
 
 
@@ -480,7 +480,7 @@ def testCBC():
 
 
 
-#testCBC()
+testCBC()
 def ECB():
     KEY=[0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78, 0x23, 0x45, 0x67, 0x89, 0x34, 0x56, 0x78, 0x9A]
     Message = [0x01234567, 0x89ABCDEF]
