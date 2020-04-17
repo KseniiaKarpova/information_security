@@ -409,7 +409,7 @@ def cast(msg, key, descryption = False):
 
     msgg[0] = R[count_of_round]
     msgg[1] = L[count_of_round]
-    return msg
+    return msgg
 
 def CBC_encryption(msg, key, iv):
     encry=[]
@@ -480,7 +480,7 @@ def testCBC():
 
 
 
-testCBC()
+#testCBC()
 def ECB():
     KEY=[0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78, 0x23, 0x45, 0x67, 0x89, 0x34, 0x56, 0x78, 0x9A]
     Message = [0x01234567, 0x89ABCDEF]
@@ -496,4 +496,4 @@ def ECB():
     Message = cast(Message, KEY, True)
     print("Msg after decryption: ", Message)
 
-#ECB()
+ECB()
