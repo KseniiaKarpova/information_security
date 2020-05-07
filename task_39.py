@@ -68,4 +68,4 @@ def test(m=42):
 #test(12546786)
 
 msg=b'this is test'
-test(int(binascii.hexlify(msg)))
+#test(int(binascii.hexlify(msg)))
