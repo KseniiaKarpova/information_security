@@ -17,6 +17,7 @@ def floorRoot(n, s):
             return x
         x = y
     return 1
+'''
 
 msg=b'this is test'
 bitsize = 1024
@@ -69,3 +70,4 @@ str = str(floorRoot(result,3))
 print(binascii.unhexlify(bytes(str, encoding='utf-8')))
 
 
+'''
